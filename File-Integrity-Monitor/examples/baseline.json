@@ -1,1 +1,29 @@
-
+{
+    "/Users/samgarfoot/Documents/Python Projects/Coding Challenges/file_integrity_monitor/test_files/new.exe": {
+        "hash": "ccdb438b8f0857e4ab068f3abbd87392dafeec5123d404158273d6d0250b3822",
+        "metadata": {
+            "size": 7,
+            "created": "2026-05-07 15:45:20",
+            "modified": "2026-05-07 15:45:20",
+            "extension": ".exe"
+        }
+    },
+    "/Users/samgarfoot/Documents/Python Projects/Coding Challenges/file_integrity_monitor/test_files/notes.txt": {
+        "hash": "7a2d855276ff5928647774bcbeeae6be36d10db41139c72f4876439acc622141",
+        "metadata": {
+            "size": 41,
+            "created": "2026-05-07 15:45:20",
+            "modified": "2026-05-07 15:45:20",
+            "extension": ".txt"
+        }
+    },
+    "/Users/samgarfoot/Documents/Python Projects/Coding Challenges/file_integrity_monitor/test_files/attacker.exe": {
+        "hash": "a7b09541b86b81738ce37c6eac74da3845459298849a6e7dd52ad359e214d6c9",
+        "metadata": {
+            "size": 17,
+            "created": "2026-05-07 14:25:58",
+            "modified": "2026-05-07 14:25:58",
+            "extension": ".exe"
+        }
+    }
+}
