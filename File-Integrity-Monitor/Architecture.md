@@ -1,9 +1,9 @@
 # Architecture
 
 ## Overview
-PyFIM is a lightweight File Integrity Monitoring tool that detects unauthorized file changes by comparing a trusted baseline against the current state of a directory.
+PyFIM is a lightweight File Integrity Monitoring and behavioral detection tool that monitors filesystem changes by continuously comparing a trusted baseline against real-time directory state. It combines cryptographic file fingerprinting (SHA-256), structured telemetry logging, and time-window based anomaly detection to identify suspicious activity patterns such as rapid file creation, deletion bursts, and modification spikes.
 
-It follows a snapshot-based detection model, similar to Host-based Intrusion Detection Systems (HIDS).
+It follows an extended snapshot + behavioral hybrid model, similar to modern Host-based Intrusion Detection Systems (HIDS) and early-stage Endpoint Detection & Response (EDR) sensors, providing both state-based and activity-based detection capabilities.
 
 ----
                 ┌──────────────────────────┐
