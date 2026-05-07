@@ -36,13 +36,13 @@ When run with --scan, the tool:
 - Recalculates hashes for all current files
 - Loads the saved baseline
 - Compares both states
-- 
+
 3. Detection Logic
 Changes are classified into:
 - New Files → exist now but not in baseline
 - Deleted Files → existed in baseline but missing now
 - Modified Files → same file path but different hash
-- 
+
 4. Logging System
 All detected events are logged to:
 - logs/alerts.log
