@@ -68,3 +68,22 @@ flowchart TD
     E --> F[Logging System]
     F --> G[Move / Quarantine Files]
 ```
+
+## 🔐 Security Design Principles
+This tool follows simplified SOC-style principles:
+
+1. Least Privilege Awareness - System-level scanning requires explicit confirmation.
+2. Auditability - Every action is logged with metadata and timestamps.
+3. Isolation - Suspicious files are moved into a quarantine directory.
+4. Traceability - SHA-256 hashes allow file verification and forensic comparison.
+
+## 🚀 Future Improvements
+
+### 🧠 Detection Enhancements
+- VirusTotal API integration
+- File entropy scoring
+- Behaviour-based detection rules
+
+### 📊 Analytics Layer
+- CSV/JSON export
+- Dashboard (Splunk / ELK / Grafana)
