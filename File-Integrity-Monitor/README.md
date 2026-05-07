@@ -16,14 +16,15 @@ Baseline creation and secure storage (baseline.json)
 - ✏️ Modified files
 
 ## 📁 Deep Directory Scanning
-- Recursive scanning using 'rglob'
+- Recursive scanning using `rglob`
 - Full filesystem visibility within target directory
 
 Metadata collection:
-      - File size
-      - Creation time
-      - Last modified time
-      - File extension
+
+- File size
+- Creation time
+- Last modified time
+- File extension
 
 ## Advanced Detection Engine
 - Real-time change comparison against baseline
@@ -40,7 +41,7 @@ Burst detection logic for suspicious activity patterns:
       - 🚨 Ransomware-like file creation spikes
       - 🚨 Mass deletion behavior
       - 🚨 Rapid modification bursts
-      - Sliding window event analysis using 'deque'
+      - Sliding window event analysis using `deque`
 
 ## Alert Intelligence Layer
 - JSON-formatted structured logging
@@ -53,16 +54,16 @@ Event enrichment with metadata:
       
 ## Watch Mode (Continuous Monitoring)
 - Real-time monitoring mode using interval scanning
-- Configurable scan interval '(--interval)'
+- Configurable scan interval `(--interval)`
 - Continuous baseline comparison loop
 - Lightweight polling-based detection engine
 
 ## CLI Interface
 
 Built using argparse with simple operational modes:
-- '--init <folder>' → create baseline snapshot
-- '--scan <folder>' → run single comparison
-- '--watch' → continuous monitoring mode
+- `--init <folder>` → create baseline snapshot
+- `--scan <folder>` → run single comparison
+- `--watch` → continuous monitoring mode
 
 ## Detection Logic
 
@@ -78,7 +79,7 @@ On top of this, PyFIM introduces:
 
 ## Logging System
 All alerts are stored in structured JSON format:
-'logs/alerts.json'
+`logs/alerts.json`
 
 Each event includes:
 - Timestamp (UTC)
