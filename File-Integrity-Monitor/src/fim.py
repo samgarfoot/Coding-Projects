@@ -4,20 +4,93 @@ import argparse
 import sys
 from pathlib import Path
 from datetime import datetime
+from collections import deque
+import time
+import hmac
+
+# ---------------- STATE ---------------- #
+
+event_times = {
+    "new": deque(),
+    "deleted": deque(),
+    "modified": deque()
+}
+
+last_alert_state = {}
+last_behavior_alert = {}
+
+SECRET_KEY = b"fim_secret_key"
 
 LOG_DIR = Path("logs")
 LOG_DIR.mkdir(exist_ok=True)
+
+# ---------------- ARGPARSE ---------------- #
 
 parser = argparse.ArgumentParser(description="PyFIM - File Integrity Monitor")
 
 parser.add_argument("--init", type=str, help="Create baseline from target folder")
 parser.add_argument("--scan", type=str, help="Scan folder and compare against baseline")
+parser.add_argument("--watch", action="store_true", help="Continuously monitor folder")
+parser.add_argument("--interval", type=int, default=30, help="Scan interval in seconds")
 
-args=parser.parse_args()
+args = parser.parse_args()
+
+# ---------------- UTIL ---------------- #
+
+def prune_events(event_queue, window_seconds):
+    current_time = time.time()
+
+    while event_queue and current_time - event_queue[0] > window_seconds:
+        event_queue.popleft()
+
+# ---------------- WATCH MODE ---------------- #
+
+def watch_mode(target_folder, baseline):
+    print(f"[WATCH MODE] Monitoring {target_folder} every {args.interval}s\n")
+
+    while True:
+        time.sleep(args.interval)
+
+        current_state = scan_directory(target_folder)
+        compare(baseline, current_state)
+
+# ---------------- BASELINE SECURITY ---------------- #
+
+def generate_baseline_hash(data: dict):
+    return hmac.new(
+        SECRET_KEY,
+        json.dumps(data, sort_keys=True).encode(),
+        hashlib.sha256
+    ).hexdigest()
+
 
 def load_baseline(path: Path):
     with open(path, "r") as f:
-        return json.load(f)
+        data = json.load(f)
+
+    if "baseline" not in data or "hash" not in data:
+        print("[CRITICAL] Invalid baseline format")
+        sys.exit()
+
+    expected_hash = generate_baseline_hash(data["baseline"])
+
+    if data["hash"] != expected_hash:
+        print("[CRITICAL] Baseline tampering detected!")
+        sys.exit()
+
+    return data["baseline"]
+
+
+def save_baseline(baseline: dict, path: Path):
+    data = {
+        "baseline": baseline,
+        "hash": generate_baseline_hash(baseline)
+    }
+
+    with open(path, "w") as f:
+        json.dump(data, f, indent=4)
+
+# ---------------- FILE ANALYSIS ---------------- #
 
 def calculate_hash(path: Path):
     try:
@@ -29,47 +102,43 @@ def calculate_hash(path: Path):
     except Exception:
         return "UNREADABLE"
 
+
 def get_metadata(file_path: Path):
-    stats = file_path.stat()
-    
-    return {
-        "size": stats.st_size,
-        "created": datetime.fromtimestamp(stats.st_ctime).strftime("%Y-%m-%d %H:%M:%S"),
-        "modified": datetime.fromtimestamp(stats.st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
-        "extension": file_path.suffix
-    }
+    try:
+        stats = file_path.stat()
+        return {
+            "size": stats.st_size,
+            "created": datetime.fromtimestamp(stats.st_ctime).strftime("%Y-%m-%d %H:%M:%S"),
+            "modified": datetime.fromtimestamp(stats.st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
+            "extension": file_path.suffix
+        }
+    except Exception:
+        return {
+            "size": -1,
+            "created": "UNKNOWN",
+            "modified": "UNKNOWN",
+            "extension": file_path.suffix
+        }
+
+# ---------------- SCANNING ---------------- #
 
 def create_baseline(target_folder: Path):
     baseline = {}
-    for file_path in target_folder.iterdir():
 
+    for file_path in target_folder.iterdir():
         if file_path.is_file():
             baseline[str(file_path.resolve())] = {
                 "hash": calculate_hash(file_path),
                 "metadata": get_metadata(file_path)
             }
+
     return baseline
 
-def save_baseline(baseline: dict, path: Path):
-    with open(path, "w") as f:
-        json.dump(baseline, f, indent=4)
-
-def log_alert(severity, event_type, file_path, action):
-    LOG_DIR.mkdir(exist_ok=True)
-
-    log_file = LOG_DIR / "alerts.log"
-
-    with open(log_file, "a") as f:
-        f.write(
-            f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
-            f"[{severity}] [{event_type}] {file_path} - {action}\n"
-        )
 
 def scan_directory(target_folder: Path):
     current = {}
 
     for file_path in target_folder.rglob("*"):
-
         if file_path.is_file():
             current[str(file_path.resolve())] = {
                 "hash": calculate_hash(file_path),
@@ -78,9 +147,27 @@ def scan_directory(target_folder: Path):
 
     return current
 
-def compare(baseline, current):
+# ---------------- LOGGING ---------------- #
 
-    changes_detected = 0
+def log_alert(severity, event_type, file_path, action, extra=None):
+    log_file = LOG_DIR / "alerts.json"
+
+    event = {
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "severity": severity,
+        "event_type": event_type,
+        "file": file_path,
+        "action": action,
+        "extra": extra or {}
+    }
+
+    with open(log_file, "a") as f:
+        f.write(json.dumps(event) + "\n")
+
+# ---------------- COMPARISON ENGINE ---------------- #
+
+def compare(baseline, current):
+    WINDOW = 10  # seconds
 
     baseline_files = set(baseline.keys())
     current_files = set(current.keys())
@@ -89,64 +176,93 @@ def compare(baseline, current):
     deleted_files = baseline_files - current_files
     common_files = baseline_files & current_files
 
-    # NEW FILES
+    # ---------------- NEW FILES ---------------- #
     for file in new_files:
-        print("\n[HIGH] [NEW FILE] DETECTED")
-        print(f"File: {file}")
-        print("Action: Investigate immediately")
+        event_times["new"].append(time.time())
+        prune_events(event_times["new"], WINDOW)
 
-        log_alert("HIGH", "NEW FILE", file, "Investigate immediately")
-        changes_detected += 1
+        if len(event_times["new"]) > 20:
+            if not last_behavior_alert.get("new_burst"):
+                print("\n[CRITICAL] RANSOMWARE-LIKE FILE CREATION BURST")
+                log_alert(
+                    "CRITICAL",
+                    "RANSOMWARE_BURST_NEW_FILES",
+                    "SYSTEM",
+                    "Too many file creations in time window",
+                    extra={"count": len(event_times["new"]), "window": WINDOW}
+                )
+                last_behavior_alert["new_burst"] = True
 
-    # DELETED FILES
+    # ---------------- DELETED FILES ---------------- #
     for file in deleted_files:
-        print("\n[MEDIUM] FILE MISSING")
-        print(f"File: {file}")
-        print("Action: Check for deletion or tampering")
+        event_times["deleted"].append(time.time())
+        prune_events(event_times["deleted"], WINDOW)
 
-        log_alert("MEDIUM", "FILE MISSING", file, "Check for deletion or tampering")
-        changes_detected += 1
+        if len(event_times["deleted"]) > 10:
+            if not last_behavior_alert.get("del_burst"):
+                print("\n[CRITICAL] MASS DELETION BURST DETECTED")
+                log_alert(
+                    "CRITICAL",
+                    "DELETION_BURST",
+                    "SYSTEM",
+                    "Too many file deletions in time window",
+                    extra={"count": len(event_times["deleted"]), "window": WINDOW}
+                )
+                last_behavior_alert["del_burst"] = True
 
-    # MODIFIED FILES
+    # ---------------- MODIFIED FILES ---------------- #
     for file in common_files:
-        if baseline[file]["hash"] != current[file]["hash"]:
-            print("\n[HIGH] FILE MODIFIED")
-            print(f"File: {file}")
-            print("Action: Possible tampering detected")
+        old_hash = baseline[file]["hash"]
+        new_hash = current[file]["hash"]
 
-            log_alert("HIGH", "FILE MODIFIED", file, "Possible tampering detected")
-            changes_detected += 1
-            
-    if changes_detected == 0:
-        print("\n[OK] No changes detected - system is stable")
-    else:
-        print(f"\n[SUMMARY] Total changes detected: {changes_detected}")
+        if old_hash != new_hash:
+
+            event_times["modified"].append(time.time())
+            prune_events(event_times["modified"], WINDOW)
+
+            event_key = f"{file}:{new_hash}"
+
+            if last_alert_state.get(event_key):
+                continue
+
+            last_alert_state[event_key] = True
+
+    # ---------------- BURST DETECTION (FIXED PLACE) ---------------- #
+
+    mod_rate = len(event_times["modified"]) / WINDOW
+
+    if mod_rate > 3:
+        if not last_behavior_alert.get("mod_burst"):
+            print("\n[CRITICAL] TAMPERING BURST DETECTED")
+            log_alert(
+                "CRITICAL",
+                "MODIFICATION_BURST",
+                "SYSTEM",
+                "High rate of file modifications detected",
+                extra={
+                    "count": len(event_times["modified"]),
+                    "window": WINDOW,
+                    "rate": mod_rate
+                }
+            )
+            last_behavior_alert["mod_burst"] = True
+
+# ---------------- CLI FLOW ---------------- #
 
 if args.init:
-
     target_folder = Path(args.init).resolve()
-    if not target_folder.exists():
 
+    if not target_folder.exists():
         print("[ERROR] Folder does not exist")
         sys.exit()
 
-    if not any(target_folder.iterdir()):
-        print("[WARNING] Folder is empty")
-
     baseline = create_baseline(target_folder)
-
     save_baseline(baseline, Path("baseline.json"))
+
     print("\n[+] Baseline created successfully")
-    
     print(f"[+] Files monitored: {len(baseline)}")
-    
-    print("\n[+] Files included in baseline:")
-    
-    for i, file in enumerate(baseline.keys(), 1):
-        print(f"{i}. {file}")
 
-if args.scan:
-
+elif args.scan:
     target_folder = Path(args.scan).resolve()
 
     if not target_folder.exists():
@@ -160,6 +276,9 @@ if args.scan:
         sys.exit()
 
     baseline = load_baseline(baseline_path)
-    current = scan_directory(target_folder)
 
-    compare(baseline, current)
+    if args.watch:
+        watch_mode(target_folder, baseline)
+    else:
+        current = scan_directory(target_folder)
+        compare(baseline, current)
