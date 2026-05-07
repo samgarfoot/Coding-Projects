@@ -31,26 +31,27 @@ Metadata collection:
 - Deduplication system to prevent repeated alerts
 
 Structured severity classification:
-      - HIGH → file creation/modification
-      - MEDIUM → file deletion
+- HIGH → file creation/modification
+- MEDIUM → file deletion
 
 ## Behavior & Anomaly Detection
 - Time-window based detection using event tracking
 
 Burst detection logic for suspicious activity patterns:
-      - 🚨 Ransomware-like file creation spikes
-      - 🚨 Mass deletion behavior
-      - 🚨 Rapid modification bursts
-      - Sliding window event analysis using `deque`
+  - 🚨 Ransomware-like file creation spikes
+  - 🚨 Mass deletion behavior
+  - 🚨 Rapid modification bursts
+  - Sliding window event analysis using `deque`
 
 ## Alert Intelligence Layer
 - JSON-formatted structured logging
 
 Event enrichment with metadata:
-      - timestamps (UTC ISO format)
-      - event category (creation, deletion, modification)
-      - hash comparison data
-      - severity classification
+
+- timestamps (UTC ISO format)
+- event category (creation, deletion, modification)
+- hash comparison data
+- severity classification
       
 ## Watch Mode (Continuous Monitoring)
 - Real-time monitoring mode using interval scanning
