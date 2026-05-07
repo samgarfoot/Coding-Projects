@@ -1,75 +1,111 @@
-# PyFIM – File Integrity Monitor 
+# 🛡️ PyFIM – File Integrity Monitor (Mini EDR Sensor)
 
 ## Overview
+PyFIM (Python File Integrity Monitor) is a lightweight host-based security monitoring tool designed to detect unauthorized file changes in real time. It builds a cryptographic baseline of files using SHA-256 hashing and continuously compares system state against this baseline to identify suspicious activity.
 
-PyFIM (Python File Integrity Monitor) is a lightweight security tool designed to detect unauthorized file changes within a target directory. It builds a cryptographic baseline of files using SHA-256 hashing and continuously compares current file states against the stored baseline to detect:
-- 🆕 Newly added files
+The project simulates a core component of modern Host-based Intrusion Detection Systems (HIDS) and early-stage EDR (Endpoint Detection & Response) sensors, commonly used in SOC environments for endpoint telemetry collection and tamper detection.
+
+## ⚙️ Core Features
+🔐 File Integrity Monitoring
+SHA-256 hashing for reliable tamper detection
+Baseline creation and secure storage (baseline.json)
+
+### Detection of:
+- 🆕 New files
 - ❌ Deleted files
-- ✏️ Modified or tampered files
+- ✏️ Modified files
 
-This project simulates a core component of real-world Host-based Intrusion Detection Systems (HIDS) used in cybersecurity monitoring and SOC environments.
+## 📁 Deep Directory Scanning
+- Recursive scanning using 'rglob'
+- Full filesystem visibility within target directory
 
-## ⚙️ Features
-- 🔐 SHA-256 File Hashing for tamper detection
-- 📁 Recursive directory scanning using rglob
-- 🧾 Baseline generation & persistence in JSON format
-- 📊 Metadata tracking (size, creation time, modification time, extension)
-- 🚨 Change detection engine
-- 📝 Alert logging system with timestamps
-- 💻 Simple CLI interface using argparse
-   - New file detection (HIGH severity)
-   - Modified file detection (HIGH severity)
-   - Deleted file detection (MEDIUM severity)
+Metadata collection:
+      - File size
+      - Creation time
+      - Last modified time
+      - File extension
 
-## How It Works
+## Advanced Detection Engine
+- Real-time change comparison against baseline
+- Deduplication system to prevent repeated alerts
 
-1. Baseline Creation
-When run with --init, the tool scans a target directory and stores:
-- File path
-- SHA-256 hash
-- Metadata
+Structured severity classification:
+      - HIGH → file creation/modification
+      - MEDIUM → file deletion
 
-This baseline is saved as baseline.json.
+## Behavior & Anomaly Detection
+- Time-window based detection using event tracking
 
-2. Scanning Mode
-When run with --scan, the tool:
-- Recalculates hashes for all current files
-- Loads the saved baseline
-- Compares both states
+Burst detection logic for suspicious activity patterns:
+      - 🚨 Ransomware-like file creation spikes
+      - 🚨 Mass deletion behavior
+      - 🚨 Rapid modification bursts
+      - Sliding window event analysis using 'deque'
 
-3. Detection Logic
-Changes are classified into:
-- New Files → exist now but not in baseline
-- Deleted Files → existed in baseline but missing now
-- Modified Files → same file path but different hash
+## Alert Intelligence Layer
+- JSON-formatted structured logging
 
-4. Logging System
-All detected events are logged to:
-- logs/alerts.log
-Each entry includes:
-- Timestamp
+Event enrichment with metadata:
+      - timestamps (UTC ISO format)
+      - event category (creation, deletion, modification)
+      - hash comparison data
+      - severity classification
+      
+## Watch Mode (Continuous Monitoring)
+- Real-time monitoring mode using interval scanning
+- Configurable scan interval '(--interval)'
+- Continuous baseline comparison loop
+- Lightweight polling-based detection engine
+
+## CLI Interface
+
+Built using argparse with simple operational modes:
+- '--init <folder>' → create baseline snapshot
+- '--scan <folder>' → run single comparison
+- '--watch' → continuous monitoring mode
+
+## Detection Logic
+
+PyFIM compares filesystem state using three core sets:
+- New Files → present in current scan but not baseline
+- Deleted Files → present in baseline but missing in current scan
+- Modified Files → same file path but different SHA-256 hash
+
+On top of this, PyFIM introduces:
+- Event rate tracking (time-window analysis)
+- Burst detection thresholds for abnormal behavior
+- Duplicate alert suppression using event keys
+
+## Logging System
+All alerts are stored in structured JSON format:
+'logs/alerts.json'
+
+Each event includes:
+- Timestamp (UTC)
 - Severity level
 - Event type
-- File path
-- Action recommendation
+- Target file/system context
+- Action description
+- Additional metadata (hashes, counters, behavior stats)
 
-## Security Relevance
+## Security Simulation Value
+This project simulates core components of:
+- Host-based Intrusion Detection Systems (HIDS)
+- Endpoint Detection & Response (EDR) sensors
+- Basic SIEM telemetry ingestion formats
+- Ransomware behavior detection patterns
 
-This tool demonstrates key cybersecurity concepts:
-- File integrity verification
-- Hash-based tamper detection
-- Change auditing
-- Basic forensic logging
-- Host-based monitoring principles
+## 🚀 Current Enhancements Implemented
+- ✔ Deduplication system for repeated alerts
+- ✔ Time-window based behavioral detection
+- ✔ JSON structured logging (SIEM-ready format)
+- ✔ Continuous watch mode
+- ✔ Event rate anomaly detection
+- ✔ Improved alert categorization and severity tagging
 
-It mirrors techniques used in:
-- SOC monitoring tools
-- Endpoint detection systems (EDR/HIDS)
-- Compliance auditing (PCI-DSS, ISO 27001)
-
-## Future Improvements
-- Continuous real-time monitoring (watchdog integration)
-- Email/Discord alerting system
-- Machine learning anomaly detection layer
-- Digital signature verification (HMAC or RSA)
-
+## Future Expansion Ideas
+- Process monitoring (process creation / tree analysis)
+- Network connection tracking per process
+- Simple SIEM correlation engine
+- Auto-response actions (kill process / quarantine files)
+Threat intelligence integration (hash reputation lookup)
