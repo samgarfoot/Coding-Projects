@@ -22,7 +22,7 @@ Each project is contained within its own folder and includes:
 
 # 📂 Projects
 
-## 🛡️ [File Integrity Monitor (PyFIM)](https://github.com/samgarfoot/Coding-Projects/tree/main/File-Integrity-Monitor)
+## [File Integrity Monitor (PyFIM)](https://github.com/samgarfoot/Coding-Projects/tree/main/File-Integrity-Monitor)
 
 A Python-based File Integrity Monitoring tool that detects unauthorized file changes using SHA-256 hashing.
 
@@ -41,3 +41,5 @@ A Python-based File Integrity Monitoring tool that detects unauthorized file cha
 - Security event logging
 
 ---
+
+## [File Triage Tool]( https://github.com/samgarfoot/Coding-Projects/tree/main/File-Triage-Tool)
